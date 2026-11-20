@@ -1,0 +1,18 @@
+[package]
+name = "devskill"
+version = "0.1.0"
+edition = "2024"
+description = "Install AI skills and agents into projects"
+license = "MIT"
+
+[[bin]]
+name = "devskill"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+dialoguer = "0.11"
+
+[dev-dependencies]
+tempfile = "3"
