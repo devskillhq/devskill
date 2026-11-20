@@ -28,6 +28,8 @@ pub struct Item {
     pub description: String,
     /// Skill directory or agent `.md` file inside the catalog.
     pub source: PathBuf,
+    /// `source` relative to the catalog root, with `/` separators (recorded in the lock file).
+    pub path: String,
 }
 
 #[derive(Debug, Default)]
@@ -48,7 +50,7 @@ impl Catalog {
             for entry in sorted_entries(&skills)? {
                 let manifest = entry.join("SKILL.md");
                 if entry.is_dir() && manifest.is_file() {
-                    items.push(read_item(Kind::Skill, &manifest, entry.clone())?);
+                    items.push(read_item(root, Kind::Skill, &manifest, entry.clone())?);
                 }
             }
         }
@@ -57,12 +59,16 @@ impl Catalog {
         if agents.is_dir() {
             for entry in sorted_entries(&agents)? {
                 if entry.extension().is_some_and(|e| e == "md") {
-                    items.push(read_item(Kind::Agent, &entry, entry.clone())?);
+                    items.push(read_item(root, Kind::Agent, &entry, entry.clone())?);
                 }
             }
         }
 
         Ok(Self { items })
+    }
+
+    pub fn find_by_path(&self, path: &str) -> Option<&Item> {
+        self.items.iter().find(|i| i.path == path)
     }
 
     pub fn find_all(&self, names: &[String]) -> Result<Vec<Item>> {
@@ -88,7 +94,7 @@ fn sorted_entries(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(paths)
 }
 
-fn read_item(kind: Kind, manifest: &Path, source: PathBuf) -> Result<Item> {
+fn read_item(root: &Path, kind: Kind, manifest: &Path, source: PathBuf) -> Result<Item> {
     let text =
         fs::read_to_string(manifest).with_context(|| format!("reading {}", manifest.display()))?;
     let fm = Frontmatter::parse(&text);
@@ -96,11 +102,19 @@ fn read_item(kind: Kind, manifest: &Path, source: PathBuf) -> Result<Item> {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
+    let path = source
+        .strip_prefix(root)
+        .unwrap_or(&source)
+        .components()
+        .map(|c| c.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/");
     Ok(Item {
         kind,
         name: fm.name.unwrap_or(fallback),
         description: fm.description.unwrap_or_default(),
         source,
+        path,
     })
 }
 

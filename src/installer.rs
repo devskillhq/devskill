@@ -10,11 +10,13 @@ use crate::catalog::{Item, Kind};
 ///
 /// Skills live in the tool-agnostic `.agents/skills/` directory; agents go to `.claude/agents/`.
 pub fn destination(item: &Item, project: &Path) -> PathBuf {
-    match item.kind {
-        Kind::Skill => project.join(".agents/skills").join(&item.name),
-        Kind::Agent => project
-            .join(".claude/agents")
-            .join(format!("{}.md", item.name)),
+    destination_for(item.kind, &item.name, project)
+}
+
+pub fn destination_for(kind: Kind, name: &str, project: &Path) -> PathBuf {
+    match kind {
+        Kind::Skill => project.join(".agents/skills").join(name),
+        Kind::Agent => project.join(".claude/agents").join(format!("{name}.md")),
     }
 }
 
@@ -123,12 +125,14 @@ mod tests {
                 name: "s".into(),
                 description: String::new(),
                 source: skill_src,
+                path: "skills/s".into(),
             },
             Item {
                 kind: Kind::Agent,
                 name: "a".into(),
                 description: String::new(),
                 source: agent_src,
+                path: "agents/a.md".into(),
             },
         ])
     }
